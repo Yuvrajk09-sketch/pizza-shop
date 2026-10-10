@@ -15,7 +15,13 @@ class AuthService {
       process.env.JWT_SECRET || 'supersecretjwtkey',
       { expiresIn: '24h' }
     );
-    return { access_token: token, token_type: 'bearer' };
+    return { 
+      access_token: token, 
+      token_type: 'bearer',
+      user_name: user.full_name,
+      email: user.email,
+      is_admin: user.is_admin
+    };
   }
 
   async getMe(userId) {

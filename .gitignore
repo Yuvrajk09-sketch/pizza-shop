@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.env
+.env.local
+.DS_Store
+backend_python/venv/
+backend_python_old/venv/
+backend_python/__pycache__/
+backend_python_old/__pycache__/

@@ -1,0 +1,272 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  /* Brand palette */
+  --ember-primary:    #FF5B26;
+  --ember-mid:        #E84D1C;
+  --ember-glow:       rgba(255, 91, 38, 0.40);
+  --gold-accent:      #F59E0B;
+  --gold-warm:        #C4A87A;
+  
+  /* Backgrounds */
+  --bg-base:          #08090C;
+  --bg-surface:       #0D0E12;
+  --bg-raised:        #12141A;
+  
+  /* Typography */
+  --font-body:        'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display:     'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  
+  /* Spacing rhythm */
+  --space-xs:         4px;
+  --space-sm:         8px;
+  --space-md:         16px;
+  --space-lg:         24px;
+  --space-xl:         40px;
+  --space-2xl:        64px;
+}
+
+/* ============================================================
+   GLOBAL RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: #F0EDE8;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+
+::selection {
+  background-color: var(--ember-primary);
+  color: #ffffff;
+}
+
+/* ============================================================
+   DISPLAY / CALLIGRAPHIC TYPOGRAPHY
+   ============================================================ */
+
+/* Use .font-display on any element for Cormorant Garamond */
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "liga" 1, "kern" 1, "onum" 1;
+  letter-spacing: 0.01em;
+}
+
+.display-hero {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 8vw, 96px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.display-title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.display-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.display-price {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3.5vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================================
+   GLASS PANELS
+   ============================================================ */
+.glass-panel {
+  background: rgba(18, 20, 26, 0.72);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.glass-panel-elevated {
+  background: rgba(24, 27, 36, 0.88);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border: 1px solid rgba(255, 91, 38, 0.20);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 0 40px rgba(255, 91, 38, 0.08);
+}
+
+.glass-badge {
+  background: rgba(255, 91, 38, 0.10);
+  border: 1px solid rgba(255, 91, 38, 0.28);
+  color: #FF7A45;
+}
+
+/* ============================================================
+   GLOW UTILITIES
+   ============================================================ */
+.glow-ember {
+  box-shadow: 0 0 30px rgba(255, 91, 38, 0.50),
+              0 0 60px rgba(255, 91, 38, 0.20);
+}
+
+.glow-ember-sm {
+  box-shadow: 0 0 14px rgba(255, 91, 38, 0.38);
+}
+
+.glow-gold {
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.40);
+}
+
+/* ============================================================
+   GRADIENT TEXT
+   ============================================================ */
+.text-gradient-ember {
+  background: linear-gradient(135deg, #FFF0EB 0%, #FF7A45 45%, #FF3D00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #FFFBEB 0%, #F59E0B 45%, #B45309 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-cream {
+  background: linear-gradient(135deg, #FFFFFF 0%, #E5D5C0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================================
+   BACKGROUND TEXTURES
+   ============================================================ */
+.bg-mesh-dark {
+  background-image:
+    radial-gradient(ellipse at 12% 18%, rgba(255, 91, 38, 0.09) 0%, transparent 45%),
+    radial-gradient(ellipse at 88% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(14, 16, 21, 0.6) 0%, transparent 75%);
+}
+
+.bg-subtle-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   CUSTOM SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: #252834;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ember-primary);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+/* Radar pulse for active order status icon */
+@keyframes radar-pulse {
+  0%   { transform: scale(0.94); box-shadow: 0 0 0 0 rgba(255, 91, 38, 0.70); }
+  70%  { transform: scale(1.02); box-shadow: 0 0 0 14px rgba(255, 91, 38, 0); }
+  100% { transform: scale(0.94); box-shadow: 0 0 0 0 rgba(255, 91, 38, 0); }
+}
+.radar-pulse {
+  animation: radar-pulse 2.2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+
+/* Shimmer loading skeleton */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #1a1c24 25%, #22252f 50%, #1a1c24 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.6s infinite linear;
+  border-radius: 6px;
+}
+
+/* Smooth fade-in */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Float for 3D canvas elements */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+.animate-float {
+  animation: float-y 4s ease-in-out infinite;
+}
+
+/* INR price counter glow */
+@keyframes price-glow {
+  0%, 100% { text-shadow: 0 0 8px rgba(255, 91, 38, 0.4); }
+  50%       { text-shadow: 0 0 18px rgba(255, 91, 38, 0.7), 0 0 30px rgba(255, 91, 38, 0.2); }
+}
+.price-glow {
+  animation: price-glow 2.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   INVOICE PRINT STYLES
+   ============================================================ */
+@media print {
+  body {
+    background: #fff !important;
+    color: #1a1a1a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  /* Hide all non-invoice UI */
+  nav, header, footer, .cart-drawer, .checkout-modal {
+    display: none !important;
+  }
+}

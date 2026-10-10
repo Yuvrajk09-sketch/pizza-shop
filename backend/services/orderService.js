@@ -25,7 +25,8 @@ class OrderService {
       delivery_notes: data.delivery_notes,
       payment_method: data.payment_method,
       subtotal, tax, delivery_fee, total_amount,
-      status: 'received'
+      status: 'received',
+      user_id: data.user_id || null
     });
 
     for (const item of data.items) {
@@ -52,6 +53,14 @@ class OrderService {
     const order = await Order.findByPk(orderId, { include: ['items'] });
     if (!order) throw new Error("Order not found");
     return order;
+  }
+
+  async getOrdersByUser(userId) {
+    return await Order.findAll({
+      where: { user_id: userId },
+      order: [['created_at', 'DESC']],
+      include: ['items']
+    });
   }
 }
 

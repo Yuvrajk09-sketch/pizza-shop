@@ -122,10 +122,14 @@ export async function fetchMenu(): Promise<{ pizzas: Pizza[]; toppings: Topping[
   }
 }
 
-export async function submitOrder(orderData: any): Promise<Order> {
+export async function submitOrder(orderData: any, token?: string): Promise<Order> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   const res = await fetch(`${API_BASE}/orders`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(orderData),
   });
   if (!res.ok) {
@@ -138,6 +142,15 @@ export async function submitOrder(orderData: any): Promise<Order> {
     }
     throw new Error(errorMessage);
   }
+  return await res.json();
+}
+
+export async function fetchMyOrders(token: string): Promise<Order[]> {
+  const res = await fetch(`${API_BASE}/orders/my-orders`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  if (!res.ok) throw new Error('Failed to fetch orders');
   return await res.json();
 }
 

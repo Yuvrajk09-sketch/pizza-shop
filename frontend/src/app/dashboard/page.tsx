@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { fetchOrderById } from '@/lib/api';
+import { fetchOrderById, fetchMyOrders } from '@/lib/api';
 import { Order } from '@/types/pizza';
 import { 
   User, Package, MapPin, History, ChevronRight, 
@@ -22,13 +22,19 @@ export default function CustomerDashboard() {
     const loadOrders = async () => {
       setLoading(true);
       try {
-        const localIds = JSON.parse(localStorage.getItem('slicecraft_orders') || '[]');
-        if (localIds.length > 0) {
-          const promises = localIds.map((id: string) => fetchOrderById(id).catch(() => null));
-          const results = await Promise.all(promises);
-          setSavedOrders(results.filter(Boolean) as Order[]);
+        const userToken = localStorage.getItem('user_token');
+        if (userToken) {
+          const myOrders = await fetchMyOrders(userToken);
+          setSavedOrders(myOrders);
         } else {
-          setSavedOrders([]);
+          const localIds = JSON.parse(localStorage.getItem('slicecraft_orders') || '[]');
+          if (localIds.length > 0) {
+            const promises = localIds.map((id: string) => fetchOrderById(id).catch(() => null));
+            const results = await Promise.all(promises);
+            setSavedOrders(results.filter(Boolean) as Order[]);
+          } else {
+            setSavedOrders([]);
+          }
         }
       } catch (e) {
         console.error(e);

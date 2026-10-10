@@ -84,7 +84,8 @@ export default function CheckoutModal() {
         })),
       };
 
-      const result = await submitOrder(orderPayload);
+      const userToken = localStorage.getItem('user_token') || undefined;
+      const result = await submitOrder(orderPayload, userToken);
 
       // Save order ID to localStorage for the customer dashboard
       const existingOrders = JSON.parse(localStorage.getItem('slicecraft_orders') || '[]');

@@ -1,0 +1,28 @@
+const { User } = require('../models');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+class AuthService {
+  async login(email, password) {
+    const user = await User.findOne({ where: { email } });
+    if (!user) throw new Error("Incorrect email or password");
+    
+    const valid = await bcrypt.compare(password, user.hashed_password);
+    if (!valid) throw new Error("Incorrect email or password");
+    
+    const token = jwt.sign(
+      { sub: user.email, user_id: user.id, is_admin: user.is_admin },
+      process.env.JWT_SECRET || 'supersecretjwtkey',
+      { expiresIn: '24h' }
+    );
+    return { access_token: token, token_type: 'bearer' };
+  }
+
+  async getMe(userId) {
+    const user = await User.findByPk(userId);
+    if (!user) throw new Error("User not found");
+    return user;
+  }
+}
+
+module.exports = new AuthService();

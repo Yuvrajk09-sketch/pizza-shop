@@ -62,7 +62,8 @@ async function seedDatabase() {
     await sequelize.sync({ force: true });
     console.log("Database reset!");
 
-    const hashed_password = await bcrypt.hash("admin123", 10);
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 10;
+    const hashed_password = await bcrypt.hash("admin123", saltRounds);
     await User.findOrCreate({
       where: { email: "admin@slicecraft.com" },
       defaults: {

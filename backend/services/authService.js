@@ -7,7 +7,8 @@ class AuthService {
     const existing = await User.findOne({ where: { email } });
     if (existing) throw new Error("Email already registered");
     
-    const hashed_password = await bcrypt.hash(password, 10);
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 10;
+    const hashed_password = await bcrypt.hash(password, saltRounds);
     const user = await User.create({
       full_name,
       email,
@@ -15,9 +16,12 @@ class AuthService {
       is_admin: false
     });
     
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new Error("JWT_SECRET is missing from environment configuration");
+
     const token = jwt.sign(
       { sub: user.email, user_id: user.id, is_admin: user.is_admin },
-      process.env.JWT_SECRET || 'supersecretjwtkey',
+      jwtSecret,
       { expiresIn: '24h' }
     );
     return { 
@@ -36,9 +40,12 @@ class AuthService {
     const valid = await bcrypt.compare(password, user.hashed_password);
     if (!valid) throw new Error("Incorrect email or password");
     
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new Error("JWT_SECRET is missing from environment configuration");
+
     const token = jwt.sign(
       { sub: user.email, user_id: user.id, is_admin: user.is_admin },
-      process.env.JWT_SECRET || 'supersecretjwtkey',
+      jwtSecret,
       { expiresIn: '24h' }
     );
     return { 

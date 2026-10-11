@@ -5,7 +5,10 @@ function authenticateToken(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ detail: "Not authenticated." });
 
-  jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) return res.status(500).json({ detail: "Server misconfiguration: JWT_SECRET missing." });
+
+  jwt.verify(token, jwtSecret, (err, user) => {
     if (err) return res.status(401).json({ detail: "Invalid token." });
     req.user = user;
     next();
@@ -26,7 +29,10 @@ function optionalAuth(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return next();
 
-  jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) return next();
+
+  jwt.verify(token, jwtSecret, (err, user) => {
     if (!err) {
       req.user = user;
     }

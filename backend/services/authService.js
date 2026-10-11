@@ -22,7 +22,7 @@ class AuthService {
     const token = jwt.sign(
       { sub: user.email, user_id: user.id, is_admin: user.is_admin },
       jwtSecret,
-      { expiresIn: '24h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
     );
     return { 
       access_token: token, 
@@ -46,7 +46,7 @@ class AuthService {
     const token = jwt.sign(
       { sub: user.email, user_id: user.id, is_admin: user.is_admin },
       jwtSecret,
-      { expiresIn: '24h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
     );
     return { 
       access_token: token, 

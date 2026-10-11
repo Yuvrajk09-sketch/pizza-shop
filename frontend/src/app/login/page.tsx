@@ -29,7 +29,7 @@ function LoginForm() {
         'user_info',
         JSON.stringify({ name: data.user_name, email: data.email, is_admin: data.is_admin })
       );
-      document.cookie = `user_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `user_token=${data.access_token}; path=/; max-age=3600; SameSite=Lax`;
 
       // Notify Navbar and Cart
       window.dispatchEvent(new Event('storage'));

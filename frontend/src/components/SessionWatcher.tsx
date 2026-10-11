@@ -15,7 +15,7 @@ export default function SessionWatcher() {
       if (currentToken) {
         // Ensure cookie is synced for server-side requests & middleware
         if (!document.cookie.includes('user_token=')) {
-          document.cookie = `user_token=${currentToken}; path=/; max-age=604800; SameSite=Lax`;
+          document.cookie = `user_token=${currentToken}; path=/; max-age=3600; SameSite=Lax`;
         }
       } else {
         // Token removed or logged out

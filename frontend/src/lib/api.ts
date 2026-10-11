@@ -256,7 +256,7 @@ export async function loginAdmin(email: string, password: string): Promise<{ acc
   }
 }
 
-export async function loginUser(email: string, password: string): Promise<{ access_token: string; user_name: string; email: string }> {
+export async function loginUser(email: string, password: string): Promise<{ access_token: string; user_name: string; email: string; is_admin?: boolean }> {
   try {
     const res = await api.post('/auth/login', { email, password });
     return res.data;
@@ -265,7 +265,7 @@ export async function loginUser(email: string, password: string): Promise<{ acce
   }
 }
 
-export async function registerUser(email: string, password: string, full_name: string): Promise<{ access_token: string; user_name: string; email: string }> {
+export async function registerUser(email: string, password: string, full_name: string): Promise<{ access_token: string; user_name: string; email: string; is_admin?: boolean }> {
   try {
     const res = await api.post('/auth/register', { email, password, full_name });
     return res.data;

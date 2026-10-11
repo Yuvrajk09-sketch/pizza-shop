@@ -15,18 +15,14 @@ export function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get('user_token')?.value;
-  const isAuthPage = pathname === '/login' || pathname === '/register';
-  const isAdminPage = pathname.startsWith('/admin');
 
-  // If unauthenticated and trying to access root or other protected pages, redirect to /login
-  if (!token && !isAuthPage && !isAdminPage) {
+  // Protected customer routes requiring authentication
+  const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/orders');
+
+  if (isProtectedRoute && !token) {
     const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // If already authenticated and trying to access /login or /register, redirect to /
-  if (token && isAuthPage) {
-    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();

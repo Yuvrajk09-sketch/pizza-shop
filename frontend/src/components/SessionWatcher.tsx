@@ -9,46 +9,39 @@ export default function SessionWatcher() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const isPublic = pathname === '/login' || pathname === '/register' || pathname?.startsWith('/admin');
+    const syncSession = () => {
+      const currentToken = typeof window !== 'undefined' ? localStorage.getItem('user_token') : null;
 
-    const checkToken = () => {
-      const currentToken = localStorage.getItem('user_token');
-
-      // Sync cookie if token is in localStorage
       if (currentToken) {
+        // Ensure cookie is synced for server-side requests & middleware
         if (!document.cookie.includes('user_token=')) {
           document.cookie = `user_token=${currentToken}; path=/; max-age=604800; SameSite=Lax`;
         }
-        if (pathname === '/login' || pathname === '/register') {
-          router.replace('/');
-        }
       } else {
-        // No token found
+        // Token removed or logged out
         if (document.cookie.includes('user_token=')) {
           document.cookie = 'user_token=; path=/; max-age=0; SameSite=Lax';
         }
-        useCartStore.getState().clearCart();
-        if (!isPublic) {
+        // Redirect to login only if currently on protected customer account routes
+        if (pathname?.startsWith('/dashboard') || pathname?.startsWith('/orders')) {
           router.replace('/login');
         }
       }
     };
 
-    // Check immediately on mount/route change
-    checkToken();
+    // Check on route change and mount
+    syncSession();
 
+    // Respond when user signs in or signs out in another tab
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'user_token') {
-        checkToken();
+        syncSession();
       }
     };
 
-    const interval = setInterval(checkToken, 1000);
     window.addEventListener('storage', handleStorageChange);
-
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
     };
   }, [router, pathname]);
 

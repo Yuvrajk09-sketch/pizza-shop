@@ -212,19 +212,19 @@ export const useCartStore = create<CartStore>((set, get) => ({
   getCustomPizzaPrice: (allToppings: Topping[]) => {
     const toppingsList = (allToppings && allToppings.length > 0) ? allToppings : get().availableToppings;
     const size = get().customSize;
-    let base = BASE_PRICES[size];
+    let base = Number(BASE_PRICES[size] || 699);
     const selected = get().customToppings;
 
     selected.forEach((topName) => {
       const found = toppingsList.find((t) => t.name.toLowerCase() === topName.toLowerCase());
       if (found) {
-        base += found.price;
+        base += Number(found.price || 0);
       } else {
         base += 79.00;
       }
     });
 
-    return Number(base.toFixed(2));
+    return Number((Number(base) || 0).toFixed(2));
   },
 
   isToppingSoldOut: (name: string) => {

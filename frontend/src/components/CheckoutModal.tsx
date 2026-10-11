@@ -49,12 +49,17 @@ export default function CheckoutModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Auto-fill logged-in user profile to save user from extra work
+  // Ensure authentication and auto-fill profile
   useEffect(() => {
     if (!isCheckoutOpen) return;
+    const token = localStorage.getItem('user_token');
+    if (!token) {
+      setCheckoutOpen(false);
+      router.push('/login?redirect=/');
+      return;
+    }
     try {
       const rawUser = localStorage.getItem('user_info');
-      const token = localStorage.getItem('user_token');
       if (rawUser) {
         const parsed = JSON.parse(rawUser);
         setFormData(prev => ({
@@ -63,21 +68,19 @@ export default function CheckoutModal() {
           customer_email: prev.customer_email || parsed.email || '',
         }));
       }
-      if (token) {
-        fetchCurrentUser(token)
-          .then(user => {
-            setFormData(prev => ({
-              ...prev,
-              customer_name: prev.customer_name || user.full_name || '',
-              customer_email: prev.customer_email || user.email || '',
-              customer_phone: prev.customer_phone || (user.phone ? user.phone.replace(/\D/g, '').slice(-10) : ''),
-              delivery_address: prev.delivery_address || user.delivery_address || '',
-            }));
-          })
-          .catch(() => {});
-      }
+      fetchCurrentUser(token)
+        .then(user => {
+          setFormData(prev => ({
+            ...prev,
+            customer_name: prev.customer_name || user.full_name || '',
+            customer_email: prev.customer_email || user.email || '',
+            customer_phone: prev.customer_phone || (user.phone ? user.phone.replace(/\D/g, '').slice(-10) : ''),
+            delivery_address: prev.delivery_address || user.delivery_address || '',
+          }));
+        })
+        .catch(() => {});
     } catch {}
-  }, [isCheckoutOpen]);
+  }, [isCheckoutOpen, router, setCheckoutOpen]);
 
   if (!isCheckoutOpen) return null;
 
@@ -97,6 +100,15 @@ export default function CheckoutModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const userToken = localStorage.getItem('user_token');
+    if (!userToken) {
+      setErrorMsg('Please sign in to place your order.');
+      setCheckoutOpen(false);
+      router.push('/login?redirect=/');
+      return;
+    }
+
     if (!formData.customer_name || !formData.customer_email || !formData.customer_phone || !formData.delivery_address) {
       setErrorMsg('Please complete all required fields.');
       return;

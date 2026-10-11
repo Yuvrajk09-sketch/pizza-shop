@@ -23,21 +23,4 @@ function requireAdmin(req, res, next) {
     next();
   });
 }
-
-function optionalAuth(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return next();
-
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) return next();
-
-  jwt.verify(token, jwtSecret, (err, user) => {
-    if (!err) {
-      req.user = user;
-    }
-    next();
-  });
-}
-
-module.exports = { authenticateToken, requireAdmin, optionalAuth };
+module.exports = { authenticateToken, requireAdmin };

@@ -3,9 +3,7 @@ const orderService = require('../services/orderService');
 exports.createOrder = async (req, res) => {
   try {
     const payload = req.body;
-    if (req.user) {
-      payload.user_id = req.user.user_id;
-    }
+    payload.user_id = req.user.user_id;
     const order = await orderService.createOrder(payload);
     res.json(order);
   } catch (error) {

@@ -220,7 +220,7 @@ export default function CartDrawer() {
                       const userToken = localStorage.getItem('user_token');
                       if (!userToken) {
                         setDrawerOpen(false);
-                        router.push('/login');
+                        router.push('/login?redirect=/');
                       } else {
                         setDrawerOpen(false);
                         setCheckoutOpen(true);

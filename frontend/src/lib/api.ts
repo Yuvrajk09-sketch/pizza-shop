@@ -155,11 +155,13 @@ export async function fetchMenu(): Promise<{ pizzas: Pizza[]; toppings: Topping[
 
 export async function submitOrder(orderData: any, token?: string): Promise<Order> {
   try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('user_token') : null);
+    if (!authToken) {
+      throw new Error('Authentication required: Please sign in to place an order.');
     }
-    const res = await api.post<Order>('/orders', orderData, { headers });
+    const res = await api.post<Order>('/orders', orderData, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
     return res.data;
   } catch (err) {
     throw new Error(getErrorMessage(err, 'Failed to submit order'));

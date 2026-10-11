@@ -6,5 +6,6 @@ const { optionalAuth, authenticateToken } = require('../middleware/auth');
 router.post('/', optionalAuth, ordersController.createOrder);
 router.get('/my-orders', authenticateToken, ordersController.getMyOrders);
 router.get('/:id', ordersController.getOrder);
+router.post('/:id/verify-payment', ordersController.verifyPayment);
 
 module.exports = router;

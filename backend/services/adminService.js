@@ -5,6 +5,9 @@ const { Op } = require('sequelize');
 class AdminService {
   async getOrders() {
     return await Order.findAll({
+      where: {
+        status: { [Op.notIn]: ['cancelled', 'pending_payment'] }
+      },
       order: [['created_at', 'DESC']],
       include: ['items']
     });
@@ -41,16 +44,21 @@ class AdminService {
   }
 
   async getAnalytics() {
-    const totalOrders = await Order.count();
-    const deliveredOrders = await Order.findAll({ where: { status: 'delivered' } });
-    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.total_amount, 0);
-    const activeOrders = await Order.count({ where: { status: { [Op.in]: ['received', 'baking', 'out_for_delivery'] } } });
+    const [totalOrders, deliveredCount, rawRevenue, activeOrders] = await Promise.all([
+      Order.count({
+        where: { status: { [Op.notIn]: ['cancelled', 'pending_payment'] } }
+      }),
+      Order.count({ where: { status: 'delivered' } }),
+      Order.sum('total_amount', { where: { status: 'delivered' } }),
+      Order.count({ where: { status: { [Op.in]: ['received', 'baking', 'out_for_delivery'] } } })
+    ]);
     
+    const totalRevenue = Number(rawRevenue || 0);
     return {
       total_revenue: totalRevenue,
       total_orders: totalOrders,
       active_orders: activeOrders,
-      avg_order_value: deliveredOrders.length ? totalRevenue / deliveredOrders.length : 0
+      avg_order_value: deliveredCount > 0 ? totalRevenue / deliveredCount : 0
     };
   }
 }

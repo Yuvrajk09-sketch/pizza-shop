@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
 import { formatINR } from '@/lib/currency';
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Sparkles, IndianRupee, AlertCircle } from 'lucide-react';
@@ -12,6 +13,7 @@ export default function CartDrawer() {
     getSubtotal, getTax, getDeliveryFee, getTotal,
     isCartItemSoldOut, hasSoldOutItems,
   } = useCartStore();
+  const router = useRouter();
 
   if (!isDrawerOpen) return null;
 
@@ -215,8 +217,14 @@ export default function CartDrawer() {
                 <button
                   onClick={() => {
                     if (!hasSoldOutItems()) {
-                      setDrawerOpen(false);
-                      setCheckoutOpen(true);
+                      const userToken = localStorage.getItem('user_token');
+                      if (!userToken) {
+                        setDrawerOpen(false);
+                        router.push('/login');
+                      } else {
+                        setDrawerOpen(false);
+                        setCheckoutOpen(true);
+                      }
                     }
                   }}
                   disabled={hasSoldOutItems()}

@@ -5,6 +5,8 @@ const User = sequelize.define('User', {
   email: { type: DataTypes.STRING, unique: true, allowNull: false },
   hashed_password: { type: DataTypes.STRING, allowNull: false },
   full_name: { type: DataTypes.STRING, allowNull: false },
+  delivery_address: { type: DataTypes.TEXT, allowNull: true },
+  phone: { type: DataTypes.STRING, allowNull: true },
   is_admin: { type: DataTypes.BOOLEAN, defaultValue: false }
 }, { tableName: 'users', timestamps: true, createdAt: 'created_at', updatedAt: false });
 
@@ -13,9 +15,9 @@ const Pizza = sequelize.define('Pizza', {
   slug: { type: DataTypes.STRING, unique: true, allowNull: false },
   description: { type: DataTypes.TEXT, allowNull: false },
   category: { type: DataTypes.STRING, defaultValue: 'Signature' },
-  price_small: { type: DataTypes.FLOAT, defaultValue: 14.99 },
-  price_medium: { type: DataTypes.FLOAT, defaultValue: 18.99 },
-  price_large: { type: DataTypes.FLOAT, defaultValue: 22.99 },
+  price_small: { type: DataTypes.FLOAT, defaultValue: 499.0 },
+  price_medium: { type: DataTypes.FLOAT, defaultValue: 699.0 },
+  price_large: { type: DataTypes.FLOAT, defaultValue: 899.0 },
   image_url: { type: DataTypes.STRING },
   is_available: { type: DataTypes.BOOLEAN, defaultValue: true },
   is_custom: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -25,7 +27,7 @@ const Pizza = sequelize.define('Pizza', {
 const Topping = sequelize.define('Topping', {
   name: { type: DataTypes.STRING, unique: true, allowNull: false },
   category: { type: DataTypes.STRING, defaultValue: 'veggie' },
-  price: { type: DataTypes.FLOAT, defaultValue: 1.50 },
+  price: { type: DataTypes.FLOAT, defaultValue: 79.0 },
   color_hex: { type: DataTypes.STRING, defaultValue: '#FF5722' },
   geometry_type: { type: DataTypes.STRING, defaultValue: 'sphere' },
   is_available: { type: DataTypes.BOOLEAN, defaultValue: true },
@@ -38,16 +40,30 @@ const Order = sequelize.define('Order', {
   customer_email: { type: DataTypes.STRING, allowNull: false },
   customer_phone: { type: DataTypes.STRING, allowNull: false },
   delivery_address: { type: DataTypes.TEXT, allowNull: false },
-  delivery_city: { type: DataTypes.STRING, defaultValue: 'New York' },
+  delivery_city: { type: DataTypes.STRING, defaultValue: 'Mumbai' },
   delivery_notes: { type: DataTypes.TEXT },
   status: { type: DataTypes.STRING, defaultValue: 'received' },
   subtotal: { type: DataTypes.FLOAT, defaultValue: 0.0 },
   tax: { type: DataTypes.FLOAT, defaultValue: 0.0 },
-  delivery_fee: { type: DataTypes.FLOAT, defaultValue: 3.99 },
+  delivery_fee: { type: DataTypes.FLOAT, defaultValue: 49.0 },
   total_amount: { type: DataTypes.FLOAT, defaultValue: 0.0 },
   payment_method: { type: DataTypes.STRING, defaultValue: 'card' },
+  payment_status: { type: DataTypes.STRING, defaultValue: 'pending' },
+  payment_session_id: { type: DataTypes.STRING, allowNull: true },
+  transaction_id: { type: DataTypes.STRING, allowNull: true },
+  gateway_response: { type: DataTypes.JSON, allowNull: true },
+  paid_at: { type: DataTypes.DATE, allowNull: true },
   estimated_delivery_time: { type: DataTypes.STRING }
-}, { tableName: 'orders', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+}, { 
+  tableName: 'orders', 
+  timestamps: true, 
+  createdAt: 'created_at', 
+  updatedAt: 'updated_at',
+  indexes: [
+    { fields: ['status'] },
+    { fields: ['user_id'] }
+  ]
+});
 
 const OrderItem = sequelize.define('OrderItem', {
   pizza_name: { type: DataTypes.STRING, allowNull: false },
@@ -58,14 +74,20 @@ const OrderItem = sequelize.define('OrderItem', {
   unit_price: { type: DataTypes.FLOAT, defaultValue: 0.0 },
   total_price: { type: DataTypes.FLOAT, defaultValue: 0.0 },
   selected_toppings: { type: DataTypes.JSON, defaultValue: [] }
-}, { tableName: 'order_items', timestamps: false });
+}, { 
+  tableName: 'order_items', 
+  timestamps: false,
+  indexes: [
+    { fields: ['order_id'] }
+  ]
+});
 
 // Relationships
 User.hasMany(Order, { foreignKey: 'user_id' });
 Order.belongsTo(User, { foreignKey: 'user_id' });
 
-Order.hasMany(OrderItem, { foreignKey: 'order_id', as: 'items' });
-OrderItem.belongsTo(Order, { foreignKey: 'order_id' });
+Order.hasMany(OrderItem, { foreignKey: 'order_id', as: 'items', onDelete: 'CASCADE' });
+OrderItem.belongsTo(Order, { foreignKey: 'order_id', onDelete: 'CASCADE' });
 
 Pizza.hasMany(OrderItem, { foreignKey: 'pizza_id' });
 OrderItem.belongsTo(Pizza, { foreignKey: 'pizza_id' });

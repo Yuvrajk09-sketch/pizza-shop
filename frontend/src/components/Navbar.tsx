@@ -1,13 +1,45 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Flame, ShoppingBag, ShieldCheck, Compass, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Flame, ShoppingBag, ShieldCheck, Compass, Sparkles, User, LogOut } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 
 export default function Navbar() {
-  const { setDrawerOpen, getItemCount } = useCartStore();
+  const router = useRouter();
+  const { setDrawerOpen, getItemCount, clearCart } = useCartStore();
   const itemCount = getItemCount();
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updateAuth = () => {
+      try {
+        const raw = localStorage.getItem('user_info');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setUserName(parsed.name || parsed.email || 'Member');
+        } else {
+          setUserName(null);
+        }
+      } catch {
+        setUserName(null);
+      }
+    };
+
+    updateAuth();
+    window.addEventListener('storage', updateAuth);
+    return () => window.removeEventListener('storage', updateAuth);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user_token');
+    localStorage.removeItem('user_info');
+    document.cookie = 'user_token=; path=/; max-age=0; SameSite=Lax';
+    clearCart();
+    setUserName(null);
+    router.replace('/login');
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 px-4 md:px-8 py-4 transition-all duration-300">
@@ -36,8 +68,9 @@ export default function Navbar() {
             <Sparkles className="w-4 h-4 text-orange-400/80" />
             3D Studio
           </Link>
-          <Link href="/dashboard" className="hover:text-orange-400 transition-colors">
-            My Dashboard
+          <Link href="/dashboard" className="hover:text-orange-400 transition-colors flex items-center gap-1.5">
+            <User className="w-4 h-4 text-orange-400/80" />
+            Dashboard
           </Link>
           <Link href="/admin" className="hover:text-orange-400 transition-colors flex items-center gap-1 text-gray-400">
             <ShieldCheck className="w-4 h-4 text-gray-500" />
@@ -45,7 +78,7 @@ export default function Navbar() {
           </Link>
         </nav>
 
-        {/* Cart Drawer Trigger */}
+        {/* Right Actions */}
         <div className="flex items-center gap-3">
           <Link 
             href="/#configurator"
@@ -55,6 +88,7 @@ export default function Navbar() {
             Build 3D Pizza
           </Link>
 
+          {/* Cart Button */}
           <button
             onClick={() => setDrawerOpen(true)}
             className="relative p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all flex items-center gap-2 group"
@@ -68,6 +102,35 @@ export default function Navbar() {
               </span>
             )}
           </button>
+
+          {/* User Status / Logout */}
+          {userName ? (
+            <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+              <Link 
+                href="/dashboard"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-medium text-gray-300 hover:text-white transition-colors"
+                title="Account Profile"
+              >
+                <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="max-w-[100px] truncate">{userName}</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-xl bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-gray-400 hover:text-red-400 transition-colors"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </header>

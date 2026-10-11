@@ -1,11 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
-import { submitOrder } from '@/lib/api';
+import { submitOrder, verifyOrderPayment, fetchCurrentUser } from '@/lib/api';
 import { formatINR } from '@/lib/currency';
 import confetti from 'canvas-confetti';
+import { load } from '@cashfreepayments/cashfree-js';
+
+let cashfreeInstance: any = null;
+async function getCashfree() {
+  if (!cashfreeInstance) {
+    cashfreeInstance = await load({ mode: 'sandbox' });
+  }
+  return cashfreeInstance;
+}
+
 import { 
   X, Check, Lock, CreditCard, Banknote, 
   MapPin, Phone, User, Mail, AlertCircle, Loader2 
@@ -31,13 +41,43 @@ export default function CheckoutModal() {
     customer_email: '',
     customer_phone: '',
     delivery_address: '',
-    delivery_city: 'Manhattan, New York',
+    delivery_city: 'Mumbai, Maharashtra',
     delivery_notes: '',
     payment_method: 'card',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Auto-fill logged-in user profile to save user from extra work
+  useEffect(() => {
+    if (!isCheckoutOpen) return;
+    try {
+      const rawUser = localStorage.getItem('user_info');
+      const token = localStorage.getItem('user_token');
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        setFormData(prev => ({
+          ...prev,
+          customer_name: prev.customer_name || parsed.name || '',
+          customer_email: prev.customer_email || parsed.email || '',
+        }));
+      }
+      if (token) {
+        fetchCurrentUser(token)
+          .then(user => {
+            setFormData(prev => ({
+              ...prev,
+              customer_name: prev.customer_name || user.full_name || '',
+              customer_email: prev.customer_email || user.email || '',
+              customer_phone: prev.customer_phone || (user.phone ? user.phone.replace(/\D/g, '').slice(-10) : ''),
+              delivery_address: prev.delivery_address || user.delivery_address || '',
+            }));
+          })
+          .catch(() => {});
+      }
+    } catch {}
+  }, [isCheckoutOpen]);
 
   if (!isCheckoutOpen) return null;
 
@@ -47,10 +87,24 @@ export default function CheckoutModal() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.startsWith('91') && val.length > 10) {
+      val = val.slice(2);
+    }
+    setFormData({ ...formData, customer_phone: val.slice(0, 10) });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.customer_name || !formData.customer_email || !formData.customer_phone || !formData.delivery_address) {
       setErrorMsg('Please complete all required fields.');
+      return;
+    }
+
+    const phoneDigits = formData.customer_phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10 || !/^[6-9]/.test(phoneDigits)) {
+      setErrorMsg('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9 (e.g. 9876543210).');
       return;
     }
 
@@ -66,7 +120,7 @@ export default function CheckoutModal() {
       const orderPayload = {
         customer_name: formData.customer_name,
         customer_email: formData.customer_email,
-        customer_phone: formData.customer_phone,
+        customer_phone: `+91 ${phoneDigits.slice(0, 5)} ${phoneDigits.slice(5)}`,
         delivery_address: formData.delivery_address,
         delivery_city: formData.delivery_city,
         delivery_notes: formData.delivery_notes || undefined,
@@ -87,7 +141,21 @@ export default function CheckoutModal() {
       const userToken = localStorage.getItem('user_token') || undefined;
       const result = await submitOrder(orderPayload, userToken);
 
-      // Save order ID to localStorage for the customer dashboard
+      if (result.payment_session_id) {
+        const cashfree = await getCashfree();
+        await cashfree.checkout({
+          paymentSessionId: result.payment_session_id,
+          redirectTarget: "_modal",
+        });
+
+        // Backend directly contacts Cashfree API to verify actual transaction status
+        const verifiedOrder = await verifyOrderPayment(result.id);
+        if (verifiedOrder.payment_status !== 'paid' || verifiedOrder.status === 'cancelled') {
+          throw new Error('Payment was not completed or failed on Cashfree. Please try again or choose Cash on Delivery.');
+        }
+      }
+
+      // Save order ID to localStorage ONLY after confirmed payment or Cash on Delivery
       const existingOrders = JSON.parse(localStorage.getItem('slicecraft_orders') || '[]');
       existingOrders.unshift(result.id);
       localStorage.setItem('slicecraft_orders', JSON.stringify(existingOrders));
@@ -201,17 +269,26 @@ export default function CheckoutModal() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Phone Number *</label>
-              <div className="relative">
-                <Phone className="w-4 h-4 text-gray-500 absolute left-3 top-3.5" />
+              <label className="text-xs font-semibold text-gray-400 mb-1.5 flex items-center justify-between">
+                <span>Phone Number (+91) *</span>
+                <span className="text-[10px] text-orange-400 font-mono font-medium">{formData.customer_phone.length}/10 digits</span>
+              </label>
+              <div className="relative flex items-center">
+                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-bold text-orange-400 select-none border-r border-white/10 pr-2 z-10">
+                  <span className="text-sm">🇮🇳</span>
+                  <span>+91</span>
+                </div>
                 <input
                   type="tel"
                   name="customer_phone"
                   required
-                  placeholder="+1 (555) 000-0000"
+                  maxLength={10}
+                  pattern="[6-9][0-9]{9}"
+                  title="Please enter a 10-digit mobile number starting with 6, 7, 8, or 9"
+                  placeholder="98765 43210"
                   value={formData.customer_phone}
-                  onChange={handleChange}
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-orange-500 transition-colors"
+                  onChange={handlePhoneChange}
+                  className="w-full pl-18 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-orange-500 transition-colors tracking-wider font-mono"
                 />
               </div>
             </div>

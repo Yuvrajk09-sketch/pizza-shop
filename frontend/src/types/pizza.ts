@@ -44,6 +44,7 @@ export interface CartItem {
 }
 
 export type OrderStatus = 
+  | 'pending_payment'
   | 'received' 
   | 'baking' 
   | 'out_for_delivery' 
@@ -78,6 +79,10 @@ export interface Order {
   delivery_fee: number;
   total_amount: number;
   payment_method: string;
+  payment_status?: string;
+  payment_session_id?: string;
+  transaction_id?: string;
+  paid_at?: string;
   estimated_delivery_time?: string;
   created_at: string;
   updated_at?: string;

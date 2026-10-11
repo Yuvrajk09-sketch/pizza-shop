@@ -1,40 +1,85 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { fetchOrderById, fetchMyOrders } from '@/lib/api';
+import { fetchMyOrders, fetchCurrentUser, updateCurrentUser } from '@/lib/api';
 import { Order } from '@/types/pizza';
 import { 
   User, Package, MapPin, History, ChevronRight, 
-  Flame, Clock, CheckCircle2, ArrowRight, Pizza, Edit3 
+  Flame, Clock, CheckCircle2, ArrowRight, Pizza, Edit3,
+  Phone, X, Check, Loader2, Save
 } from 'lucide-react';
 import { formatINR } from '@/lib/currency';
 
+interface UserProfile {
+  id?: number;
+  full_name: string;
+  email: string;
+  delivery_address: string;
+  phone: string;
+}
+
 export default function CustomerDashboard() {
+  const router = useRouter();
   const [savedOrders, setSavedOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Live user profile state
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ full_name: '', delivery_address: '', phone: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState(false);
+
   useEffect(() => {
-    // In a real app, we'd fetch orders for the logged-in user.
-    // For this demo, we'll try to find any recently tracked orders in localStorage,
-    // or provide some realistic looking placeholder data if empty, to show off the UI.
-    const loadOrders = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
         const userToken = localStorage.getItem('user_token');
-        if (userToken) {
-          const myOrders = await fetchMyOrders(userToken);
-          setSavedOrders(myOrders);
+        if (!userToken) {
+          router.push('/login');
+          return;
+        }
+
+        // Fetch user profile and orders concurrently
+        const [profileRes, ordersRes] = await Promise.allSettled([
+          fetchCurrentUser(userToken),
+          fetchMyOrders(userToken)
+        ]);
+
+        if (profileRes.status === 'fulfilled') {
+          setProfile(profileRes.value);
+          setEditForm({
+            full_name: profileRes.value.full_name || '',
+            delivery_address: profileRes.value.delivery_address || '',
+            phone: profileRes.value.phone || '',
+          });
         } else {
-          const localIds = JSON.parse(localStorage.getItem('slicecraft_orders') || '[]');
-          if (localIds.length > 0) {
-            const promises = localIds.map((id: string) => fetchOrderById(id).catch(() => null));
-            const results = await Promise.all(promises);
-            setSavedOrders(results.filter(Boolean) as Order[]);
-          } else {
-            setSavedOrders([]);
+          // Fallback to local stored info
+          const local = localStorage.getItem('user_info');
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              setProfile({
+                full_name: parsed.name || 'Artisan Guest',
+                email: parsed.email || 'customer@slicecraft.com',
+                delivery_address: 'Linking Road, Bandra West, Mumbai',
+                phone: '+91 98765 43210'
+              });
+              setEditForm({
+                full_name: parsed.name || '',
+                delivery_address: 'Linking Road, Bandra West, Mumbai',
+                phone: '+91 98765 43210'
+              });
+            } catch {}
           }
+        }
+
+        if (ordersRes.status === 'fulfilled') {
+          const validOrders = (ordersRes.value || []).filter(o => o.status !== 'cancelled' && (o.status as any) !== 'pending_payment');
+          setSavedOrders(validOrders);
         }
       } catch (e) {
         console.error(e);
@@ -43,11 +88,39 @@ export default function CustomerDashboard() {
       }
     };
 
-    loadOrders();
-  }, []);
+    loadData();
+  }, [router]);
 
-  const activeOrders = savedOrders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled');
-  const pastOrders = savedOrders.filter(o => o.status === 'delivered' || o.status === 'cancelled');
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const userToken = localStorage.getItem('user_token');
+    if (!userToken) return;
+
+    setSavingProfile(true);
+    try {
+      const updated = await updateCurrentUser(userToken, editForm);
+      setProfile(prev => ({
+        ...prev,
+        ...updated,
+        delivery_address: updated.delivery_address || editForm.delivery_address,
+        phone: updated.phone || editForm.phone
+      }));
+      localStorage.setItem('user_info', JSON.stringify({ name: updated.full_name, email: updated.email }));
+      setProfileSuccess(true);
+      setTimeout(() => {
+        setProfileSuccess(false);
+        setIsEditing(false);
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const activeOrders = savedOrders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled' && (o.status as any) !== 'pending_payment');
+  const pastOrders = savedOrders.filter(o => o.status === 'delivered').slice(0, 10);
+  const rewardPoints = (pastOrders.length * 150) + 100;
 
   return (
     <div className="min-h-screen bg-[#08090C] text-white selection:bg-orange-500 flex flex-col">
@@ -64,7 +137,7 @@ export default function CustomerDashboard() {
             </div>
             <div>
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif" }} className="text-4xl font-bold text-white mb-1">
-                Welcome back, <span className="text-orange-400 italic">Gastronome</span>
+                Welcome back, <span className="text-orange-400 italic">{profile?.full_name ? profile.full_name.split(' ')[0] : 'Gastronome'}</span>
               </h1>
               <p className="text-gray-400 text-sm">Manage your artisan pizza orders and preferences.</p>
             </div>
@@ -79,27 +152,43 @@ export default function CustomerDashboard() {
           
           {/* Left Column: User Details & Stats */}
           <div className="space-y-6">
-            <div className="glass-panel rounded-3xl p-6">
+            <div className="glass-panel rounded-3xl p-6 relative">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-white">Profile Details</h2>
-                <button className="text-orange-400 hover:text-orange-300 transition-colors">
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 rounded-xl bg-white/5 hover:bg-orange-500/20 text-orange-400 hover:text-orange-300 border border-white/10 hover:border-orange-500/40 transition-all"
+                  title="Edit Profile"
+                >
                   <Edit3 className="w-4 h-4" />
                 </button>
               </div>
+
               <div className="space-y-4">
                 <div>
                   <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Name</p>
-                  <p className="text-sm text-gray-200">Demo User</p>
+                  <p className="text-sm font-semibold text-white">
+                    {profile?.full_name || 'Loading...'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Email</p>
-                  <p className="text-sm text-gray-200">demo@slicecraft.com</p>
+                  <p className="text-sm text-gray-300 font-mono">
+                    {profile?.email || 'Loading...'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Phone</p>
+                  <p className="text-sm text-gray-300 flex items-center gap-1.5 font-mono">
+                    <Phone className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                    {profile?.phone || 'Not added'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Default Delivery Address</p>
-                  <p className="text-sm text-gray-200 flex items-start gap-2">
+                  <p className="text-sm text-gray-200 flex items-start gap-2 leading-relaxed">
                     <MapPin className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
-                    742 Evergreen Terrace<br />New York, NY 10012
+                    {profile?.delivery_address || 'No default address saved'}
                   </p>
                 </div>
               </div>
@@ -108,10 +197,10 @@ export default function CustomerDashboard() {
             <div className="glass-panel rounded-3xl p-6 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-bl-[100px] transition-transform group-hover:scale-110" />
               <h2 className="text-lg font-bold text-white mb-2 relative z-10">SliceCraft Rewards</h2>
-              <p className="text-3xl font-black text-orange-400 mb-1 relative z-10">450 <span className="text-sm font-normal text-gray-400">pts</span></p>
-              <p className="text-xs text-gray-400 relative z-10 mb-4">50 points away from a free Margherita!</p>
+              <p className="text-3xl font-black text-orange-400 mb-1 relative z-10">{rewardPoints} <span className="text-sm font-normal text-gray-400">pts</span></p>
+              <p className="text-xs text-gray-400 relative z-10 mb-4">{Math.max(0, 500 - (rewardPoints % 500))} points away from a free Margherita!</p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative z-10">
-                <div className="h-full bg-gradient-to-r from-orange-600 to-amber-500 w-[90%]" />
+                <div className="h-full bg-gradient-to-r from-orange-600 to-amber-500 transition-all duration-500" style={{ width: `${Math.min(100, (rewardPoints % 500) / 5)}%` }} />
               </div>
             </div>
           </div>
@@ -173,9 +262,12 @@ export default function CustomerDashboard() {
 
             {/* Order History Section */}
             <div>
-              <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-4">
-                <History className="w-5 h-5 text-gray-400" /> Order History
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="flex items-center gap-2 text-xl font-bold text-white">
+                  <History className="w-5 h-5 text-gray-400" /> Order History
+                </h2>
+                <span className="text-xs text-gray-500 font-medium bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">Top 10 Recent</span>
+              </div>
               {loading ? null : pastOrders.length > 0 ? (
                 <div className="glass-panel rounded-3xl overflow-hidden">
                   {pastOrders.map((order, idx) => (
@@ -209,6 +301,97 @@ export default function CustomerDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Edit Profile Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md glass-panel-elevated rounded-3xl p-6 sm:p-8 border border-white/15 shadow-2xl relative">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">Edit Profile Details</h3>
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="Enter full name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                  Contact Phone
+                </label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors font-mono"
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                  Default Delivery Address
+                </label>
+                <textarea
+                  rows={3}
+                  value={editForm.delivery_address}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, delivery_address: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="Enter apartment, street, city"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold transition-all shadow-lg shadow-orange-600/20 disabled:opacity-50"
+                >
+                  {savingProfile ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Saving...
+                    </>
+                  ) : profileSuccess ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-300" />
+                      Saved!
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-white/10 bg-[#0A0B0F] py-8 text-center mt-auto">

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loginUser } from '@/lib/api';
-import Navbar from '@/components/Navbar';
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +13,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    const token = localStorage.getItem('user_token');
+    if (token) {
+      router.replace('/');
+    }
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -20,12 +27,13 @@ export default function LoginPage() {
 
     try {
       const data = await loginUser(email, password);
-      // Save token to localStorage for remembering user session
+      // Save token to localStorage and cookie for remembering user session
       localStorage.setItem('user_token', data.access_token);
       localStorage.setItem('user_info', JSON.stringify({ name: data.user_name, email: data.email }));
+      document.cookie = `user_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
       
-      // Redirect to home or checkout if they were interrupted
-      router.push('/');
+      // Redirect to home storefront
+      router.replace('/');
     } catch (err: any) {
       setError(err.message || 'Failed to login');
     } finally {
@@ -35,7 +43,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-100 font-sans selection:bg-orange-500/30 flex flex-col">
-      <Navbar onCartClick={() => {}} />
+
 
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md bg-neutral-800/50 backdrop-blur-md border border-neutral-700/50 p-8 rounded-2xl shadow-xl">

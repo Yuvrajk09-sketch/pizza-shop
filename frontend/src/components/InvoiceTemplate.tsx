@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react';
 import { Order } from '@/types/pizza';
-import { formatINR, toINR, generateInvoiceNumber, USD_TO_INR } from '@/lib/currency';
+import { formatINR, generateInvoiceNumber } from '@/lib/currency';
 
 interface InvoiceProps {
   order: Order;
@@ -215,7 +215,7 @@ export default function InvoiceTemplate({ order, onClose }: InvoiceProps) {
             <div style={{ fontSize: '13px', fontWeight: '500', color: '#1C1B18', lineHeight: '1.8' }}>
               <div style={{ textTransform: 'capitalize' }}>{order.payment_method.replace('_', ' ')}</div>
               <div style={{ fontSize: '11px', color: '#8A7A68', marginTop: '2px' }}>
-                Exchange Rate: 1 USD = ₹{USD_TO_INR.toFixed(2)}
+                Currency: Indian Rupee (INR)
               </div>
             </div>
           </div>
@@ -302,7 +302,7 @@ export default function InvoiceTemplate({ order, onClose }: InvoiceProps) {
             {/* Subtotal, Tax, Delivery */}
             {[
               { label: 'Subtotal', usd: order.subtotal },
-              { label: 'GST / Tax (8.875%)', usd: order.tax },
+              { label: 'GST (5% Restaurant Tax)', usd: order.tax },
               { label: 'Express Delivery', usd: order.delivery_fee },
             ].map(({ label, usd }) => (
               <div key={label} style={{
@@ -329,9 +329,7 @@ export default function InvoiceTemplate({ order, onClose }: InvoiceProps) {
                   fontSize: '10px', fontWeight: '600', letterSpacing: '0.18em',
                   color: '#A89070', textTransform: 'uppercase',
                 }}>Total Amount</div>
-                <div style={{ fontSize: '10px', color: '#6A5A48', marginTop: '2px' }}>
-                  (USD ${order.total_amount.toFixed(2)})
-                </div>
+                
               </div>
               <div style={{
                 fontFamily: "'Cormorant Garamond', serif",

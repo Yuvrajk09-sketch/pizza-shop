@@ -34,6 +34,8 @@ export const metadata: Metadata = {
  * Nothing in the React/Next.js codebase can fully suppress a browser extension
  * that modifies the live DOM after SSR but before hydration completes.
  */
+import SessionWatcher from "@/components/SessionWatcher";
+
 export default function RootLayout({
   children,
 }: {
@@ -49,6 +51,7 @@ export default function RootLayout({
         className="min-h-screen bg-[#08090C] text-gray-100 antialiased"
         suppressHydrationWarning
       >
+        <SessionWatcher />
         {children}
       </body>
     </html>

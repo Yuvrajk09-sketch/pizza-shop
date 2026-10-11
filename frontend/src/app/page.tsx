@@ -64,7 +64,7 @@ export default async function HomePage() {
             <p className="font-bold uppercase tracking-wider text-white mb-3">Fast Navigation</p>
             <p><a href="#configurator" className="hover:text-orange-400 transition-colors">3D Custom Studio</a></p>
             <p><a href="#menu" className="hover:text-orange-400 transition-colors">Signature Pizzas</a></p>
-            <p><a href="/orders/SC-84021" className="hover:text-orange-400 transition-colors">Live Order Tracker</a></p>
+            <p><a href="/dashboard" className="hover:text-orange-400 transition-colors">Order History &amp; Dashboard</a></p>
             <p><a href="/admin" className="hover:text-orange-400 transition-colors">Chef&apos;s Admin Portal</a></p>
           </div>
 

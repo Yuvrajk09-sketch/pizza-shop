@@ -9,8 +9,8 @@ exports.createOrder = async (req, res) => {
     const order = await orderService.createOrder(payload);
     res.json(order);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ detail: "Internal Server Error" });
+    console.error("Order creation error:", error.message);
+    res.status(400).json({ detail: error.message || "Failed to create order" });
   }
 };
 
@@ -25,9 +25,20 @@ exports.getOrder = async (req, res) => {
 
 exports.getMyOrders = async (req, res) => {
   try {
-    const orders = await orderService.getOrdersByUser(req.user.user_id);
+    const limit = parseInt(req.query.limit) || 10;
+    const orders = await orderService.getOrdersByUser(req.user.user_id, limit);
     res.json(orders);
   } catch (error) {
     res.status(500).json({ detail: "Internal Server Error" });
+  }
+};
+
+exports.verifyPayment = async (req, res) => {
+  try {
+    const order = await orderService.verifyPayment(req.params.id);
+    res.json(order);
+  } catch (error) {
+    console.error("Payment verification failure:", error.message);
+    res.status(400).json({ detail: error.message || "Payment verification failed" });
   }
 };

@@ -5,19 +5,19 @@ interface CartStore {
   items: CartItem[];
   isDrawerOpen: boolean;
   isCheckoutOpen: boolean;
-  
+
   // Menu Data for availability checking
   availablePizzas: Pizza[];
   availableToppings: Topping[];
   setMenuData: (pizzas: Pizza[], toppings: Topping[]) => void;
   sanitizeCustomToppings: (toppings: Topping[]) => void;
-  
+
   // Custom Configurator State
   customSize: PizzaSize;
   customCrust: CrustType;
   customSauce: SauceType;
   customToppings: string[];
-  
+
   // Cart Actions
   setDrawerOpen: (open: boolean) => void;
   setCheckoutOpen: (open: boolean) => void;
@@ -25,14 +25,14 @@ interface CartStore {
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
-  
+
   // Custom Builder Actions
   setCustomSize: (size: PizzaSize) => void;
   setCustomCrust: (crust: CrustType) => void;
   setCustomSauce: (sauce: SauceType) => void;
   toggleCustomTopping: (toppingName: string) => void;
   resetCustomBuilder: () => void;
-  
+
   // Getters & Validators
   getSubtotal: () => number;
   getTax: () => number;
@@ -47,9 +47,9 @@ interface CartStore {
 }
 
 const BASE_PRICES: Record<PizzaSize, number> = {
-  small: 14.99,
-  medium: 18.99,
-  large: 23.99,
+  small: 499.00,
+  medium: 699.00,
+  large: 899.00,
 };
 
 export const useCartStore = create<CartStore>((set, get) => ({
@@ -191,17 +191,17 @@ export const useCartStore = create<CartStore>((set, get) => ({
 
   getTax: () => {
     const subtotal = get().getSubtotal();
-    return Number((subtotal * 0.08875).toFixed(2));
+    return Number((subtotal * 0.05).toFixed(2)); // 5% GST
   },
 
   getDeliveryFee: () => {
-    return get().items.length > 0 ? 3.99 : 0;
+    return get().items.length > 0 ? 49.00 : 0; // Flat ₹49
   },
 
   getTotal: () => {
     const subtotal = get().getSubtotal();
-    const tax = get().getTax();
-    const fee = get().getDeliveryFee();
+    const tax = Number((subtotal * 0.05).toFixed(2));
+    const fee = get().items.length > 0 ? 49.00 : 0;
     return Number((subtotal + tax + fee).toFixed(2));
   },
 
@@ -220,7 +220,7 @@ export const useCartStore = create<CartStore>((set, get) => ({
       if (found) {
         base += found.price;
       } else {
-        base += 1.50;
+        base += 79.00;
       }
     });
 

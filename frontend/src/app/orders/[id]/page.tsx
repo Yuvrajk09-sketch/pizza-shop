@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { fetchOrderById } from '@/lib/api';
 import { formatINR } from '@/lib/currency';
 import { Order, OrderStatus } from '@/types/pizza';
@@ -14,6 +14,7 @@ import {
   CheckCircle2, Clock, Flame, Bike,
   Sparkles, MapPin, ShieldCheck,
   Receipt, ArrowLeft, RefreshCw, Radio, FileText,
+  XCircle, AlertTriangle, Pizza,
 } from 'lucide-react';
 
 const STEPS: { status: OrderStatus; label: string; desc: string; icon: any }[] = [
@@ -45,7 +46,22 @@ const STEPS: { status: OrderStatus; label: string; desc: string; icon: any }[] =
 
 export default function OrderTrackerPage() {
   const params = useParams();
+  const router = useRouter();
   const orderId = params?.id as string;
+
+  useEffect(() => {
+    const userToken = localStorage.getItem('user_token');
+    if (!userToken) {
+      router.push('/login');
+      return;
+    }
+    if (!orderId) return;
+    let isMounted = true;
+    fetchOrderById(orderId)
+      .then((data) => { if (isMounted) { setOrder(data); setLoading(false); } })
+      .catch(() => { if (isMounted) setLoading(false); });
+    return () => { isMounted = false; };
+  }, [orderId, router]);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,16 +71,9 @@ export default function OrderTrackerPage() {
 
   useEffect(() => {
     if (!orderId) return;
-    let isMounted = true;
-    fetchOrderById(orderId)
-      .then((data) => { if (isMounted) { setOrder(data); setLoading(false); } })
-      .catch(() => { if (isMounted) setLoading(false); });
-    return () => { isMounted = false; };
-  }, [orderId]);
-
-  useEffect(() => {
-    if (!orderId) return;
-    const wsUrl = `ws://127.0.0.1:8000/api/ws/orders/${orderId}`;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const wsBase = apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+    const wsUrl = `${wsBase}/ws/orders/${orderId}`;
     let socket: WebSocket | null = null;
     let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -96,15 +105,18 @@ export default function OrderTrackerPage() {
     };
   }, [orderId]);
 
+  const isCancelled = order?.status === 'cancelled' || order?.payment_status === 'failed';
+  const isDelivered = order?.status === 'delivered';
+
   const getStepIndex = (status: OrderStatus) => {
+    if (status === 'cancelled' || status === 'pending_payment') return -1;
     const map: Record<OrderStatus, number> = {
-      received: 0, baking: 1, out_for_delivery: 2, delivered: 3, cancelled: 0,
+      pending_payment: -1, received: 0, baking: 1, out_for_delivery: 2, delivered: 3, cancelled: -1,
     };
-    return map[status] ?? 0;
+    return map[status] ?? -1;
   };
 
-  const currentStepIdx = order ? getStepIndex(order.status) : 0;
-  const isDelivered = order?.status === 'delivered';
+  const currentStepIdx = order ? getStepIndex(order.status) : -1;
 
   return (
     <div className="min-h-screen bg-[#08090C] text-white flex flex-col selection:bg-orange-500">
@@ -209,7 +221,9 @@ export default function OrderTrackerPage() {
                       Order #{order.id}
                     </span>
                     <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase border ${
-                      isDelivered
+                      isCancelled
+                        ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                        : isDelivered
                         ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                         : 'bg-orange-500/20 text-orange-400 border-orange-500/40'
                     }`}>
@@ -219,7 +233,10 @@ export default function OrderTrackerPage() {
                   <p className="text-xs text-gray-400 mt-1">
                     Placed for <span className="text-white font-medium">{order.customer_name}</span>
                     {' '}•{' '}
-                    Est. Arrival: <span className="text-orange-400 font-bold">{order.estimated_delivery_time || '25–35 mins'}</span>
+                    Est. Arrival:{' '}
+                    <span className={`${isCancelled ? 'text-rose-400' : 'text-orange-400'} font-bold`}>
+                      {isCancelled ? 'Cancelled (Not Dispatched)' : (order.estimated_delivery_time || '25–35 mins')}
+                    </span>
                   </p>
                 </div>
                 <div className="text-right hidden sm:block">
@@ -228,69 +245,91 @@ export default function OrderTrackerPage() {
                 </div>
               </div>
 
-              {/* 4-Stage Progression Stepper */}
-              <div className="relative mb-8">
-                <div className="absolute top-[22px] left-0 right-0 h-0.5 bg-white/10 hidden md:block" />
-                <div
-                  className="absolute top-[22px] left-0 h-0.5 bg-gradient-to-r from-orange-600 to-amber-500 transition-all duration-700 hidden md:block"
-                  style={{ width: `${(currentStepIdx / (STEPS.length - 1)) * 100}%` }}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative z-10">
-                  {STEPS.map((step, idx) => {
-                    const isPassed = idx < currentStepIdx;
-                    const isCurrent = idx === currentStepIdx;
-                    const Icon = step.icon;
-                    return (
-                      <div
-                        key={step.status}
-                        className={`flex md:flex-col items-center md:items-center gap-4 md:gap-3 text-left md:text-center p-4 rounded-2xl transition-all ${
-                          isCurrent ? 'glass-panel border-orange-500/50 shadow-lg shadow-orange-500/10' : ''
-                        }`}
-                      >
-                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                          isPassed
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                            : isCurrent
-                            ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/40 radar-pulse'
-                            : 'bg-white/5 text-gray-500 border border-white/10'
-                        }`}>
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className={`text-sm font-black ${isCurrent ? 'text-orange-400' : isPassed ? 'text-white' : 'text-gray-500'}`}>
-                            {step.label}
-                          </p>
-                          <p className="text-[11px] text-gray-400 mt-0.5 max-w-[160px]">
-                            {step.desc}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {/* Cancelled State or 4-Stage Progression Stepper */}
+              {isCancelled ? (
+                <div className="rounded-2xl p-8 bg-rose-500/10 border border-rose-500/30 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-3.5 border border-rose-500/30">
+                    <XCircle className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Order Cancelled</h3>
+                  <p className="text-xs text-rose-200/80 max-w-md mx-auto mb-6 leading-relaxed">
+                    This order was cancelled and will not be prepared by our kitchen. No payment was charged.
+                  </p>
+                  <Link
+                    href="/#menu"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs transition-all shadow-lg shadow-orange-600/20"
+                  >
+                    <Pizza className="w-4 h-4" />
+                    Order a Fresh Artisan Pizza
+                  </Link>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* 4-Stage Progression Stepper */}
+                  <div className="relative mb-8">
+                    <div className="absolute top-[22px] left-0 right-0 h-0.5 bg-white/10 hidden md:block" />
+                    <div
+                      className="absolute top-[22px] left-0 h-0.5 bg-gradient-to-r from-orange-600 to-amber-500 transition-all duration-700 hidden md:block"
+                      style={{ width: `${(Math.max(0, currentStepIdx) / (STEPS.length - 1)) * 100}%` }}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative z-10">
+                      {STEPS.map((step, idx) => {
+                        const isPassed = idx < currentStepIdx;
+                        const isCurrent = idx === currentStepIdx;
+                        const Icon = step.icon;
+                        return (
+                          <div
+                            key={step.status}
+                            className={`flex md:flex-col items-center md:items-center gap-4 md:gap-3 text-left md:text-center p-4 rounded-2xl transition-all ${
+                              isCurrent ? 'glass-panel border-orange-500/50 shadow-lg shadow-orange-500/10' : ''
+                            }`}
+                          >
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                              isPassed
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                : isCurrent
+                                ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/40 radar-pulse'
+                                : 'bg-white/5 text-gray-500 border border-white/10'
+                            }`}>
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className={`text-sm font-black ${isCurrent ? 'text-orange-400' : isPassed ? 'text-white' : 'text-gray-500'}`}>
+                                {step.label}
+                              </p>
+                              <p className="text-[11px] text-gray-400 mt-0.5 max-w-[160px]">
+                                {step.desc}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-              {/* Courier HUD */}
-              <div className="glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-white/10">
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
-                    <Bike className="w-5 h-5 text-orange-400" />
+                  {/* Courier HUD */}
+                  <div className="glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-white/10">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
+                        <Bike className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">Courier Partner: Luigi Ferrari</p>
+                        <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-red-400" />
+                          {order.delivery_address}, {order.delivery_city}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-gray-500" />
+                      <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                        Live Speed: 18 mph
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-white">Courier Partner: Luigi Ferrari</p>
-                    <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-red-400" />
-                      {order.delivery_address}, {order.delivery_city}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5 text-gray-500" />
-                  <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                    Live Speed: 18 mph
-                  </span>
-                </div>
-              </div>
+                </>
+              )}
             </div>
 
             {/* Order Items & Financial Summary */}
@@ -349,7 +388,7 @@ export default function OrderTrackerPage() {
                   <div className="space-y-3 text-xs">
                     {[
                       { label: 'Subtotal', val: order.subtotal },
-                      { label: 'GST / Tax (8.875%)', val: order.tax },
+                      { label: 'GST (5% Restaurant Tax)', val: order.tax },
                       { label: 'Express Courier', val: order.delivery_fee },
                     ].map(({ label, val }) => (
                       <div key={label} className="flex justify-between text-gray-400">
@@ -358,20 +397,28 @@ export default function OrderTrackerPage() {
                       </div>
                     ))}
                     <div className="flex justify-between items-baseline pt-4 border-t border-white/10">
-                      <span className="text-sm font-black text-white">Total Paid</span>
+                      <span className="text-sm font-black text-white">{isCancelled ? 'Order Total' : 'Total Paid'}</span>
                       <span style={{ fontFamily: "'Cormorant Garamond', serif" }}
-                        className="text-2xl font-bold text-orange-400">
+                        className={`text-2xl font-bold ${isCancelled ? 'text-gray-400' : 'text-orange-400'}`}>
                         {formatINR(order.total_amount)}
                       </span>
                     </div>
-                    <p className="text-[10px] text-gray-500 text-right">@ ₹84.50 / USD</p>
                   </div>
                 </div>
 
                 <div className="space-y-3 pt-5 border-t border-white/10 mt-4">
                   <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Paid via {order.payment_method.toUpperCase()}</span>
+                    {isCancelled ? (
+                      <>
+                        <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                        <span className="text-rose-400 font-semibold">Cancelled (No payment charged)</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>Paid via {order.payment_method.toUpperCase()}</span>
+                      </>
+                    )}
                   </div>
 
                   <button

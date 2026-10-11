@@ -55,6 +55,16 @@ class AuthService {
     if (!user) throw new Error("User not found");
     return user;
   }
+
+  async updateMe(userId, data) {
+    const updateFields = {};
+    if (data.full_name) updateFields.full_name = data.full_name.trim();
+    if (data.delivery_address !== undefined) updateFields.delivery_address = data.delivery_address ? data.delivery_address.trim() : null;
+    if (data.phone !== undefined) updateFields.phone = data.phone ? data.phone.trim() : null;
+
+    await User.update(updateFields, { where: { id: userId } });
+    return { id: userId, ...updateFields };
+  }
 }
 
 module.exports = new AuthService();

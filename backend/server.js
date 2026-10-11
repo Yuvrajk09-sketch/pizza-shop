@@ -25,7 +25,7 @@ app.use('/api/admin', adminRoutes);
 
 // Sync Database and Start Server
 sequelize.sync().then(() => {
-  console.log('Database synced successfully (MySQL via Sequelize).');
+  console.log('Database synced successfully (MySQL via Sequelize with online payment tables/columns).');
   const server = app.listen(PORT, () => {
     console.log(`Node.js Express Server running on http://127.0.0.1:${PORT}`);
   });

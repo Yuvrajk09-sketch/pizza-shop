@@ -264,7 +264,9 @@ export default function AdminDashboardPage() {
     if (!token) return;
     let socket: WebSocket | null = null;
     try {
-      socket = new WebSocket('ws://127.0.0.1:8000/api/ws/admin');
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const wsBase = apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+      socket = new WebSocket(`${wsBase}/ws/admin`);
       socket.onopen = () => setWsConnected(true);
       socket.onmessage = (event) => {
         try {
@@ -329,7 +331,7 @@ export default function AdminDashboardPage() {
   };
 
   const totalRevenue = useMemo(() => orders.filter(o => o.status === 'delivered').reduce((acc, o) => acc + o.total_amount, 0), [orders]);
-  const activeOrdersCount = useMemo(() => orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length, [orders]);
+  const activeOrdersCount = useMemo(() => orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled' && (o.status as any) !== 'pending_payment').length, [orders]);
   const deliveredCount = useMemo(() => orders.filter(o => o.status === 'delivered').length, [orders]);
   const avgOrderValue = useMemo(() => deliveredCount > 0 ? totalRevenue / deliveredCount : 0, [totalRevenue, deliveredCount]);
 

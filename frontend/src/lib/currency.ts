@@ -1,40 +1,34 @@
 /**
- * Currency utility — USD to INR conversion
- * Rate: 1 USD = 84.50 INR (update periodically)
+ * Native INR Currency Formatter
+ * SliceCraft Artisan operates natively in Indian Rupees (INR - ₹).
  */
-export const USD_TO_INR = 84.50;
+export const USD_TO_INR = 1;
 
 /**
- * Convert a USD amount to INR
+ * Return native INR amount
  */
-export function toINR(usd: number): number {
-  return Math.round(usd * USD_TO_INR * 100) / 100;
+export function toINR(amount: number): number {
+  return Number(amount || 0);
 }
 
 /**
- * Format a USD value as INR string with ₹ symbol and Indian number formatting
- * e.g. 1500.50 → "₹1,500.50"
+ * Format an INR value as currency string with ₹ symbol and Indian number system (e.g. ₹1,299.00)
  */
-export function formatINR(usd: number): string {
-  const inr = toINR(usd);
+export function formatINR(amount: number): string {
+  const val = Number(amount || 0);
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(inr);
+  }).format(val);
 }
 
 /**
- * Format raw INR value (already in INR, not USD)
+ * Alias for formatINR
  */
 export function formatINRRaw(inr: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(inr);
+  return formatINR(inr);
 }
 
 /**
